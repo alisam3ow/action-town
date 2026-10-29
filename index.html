@@ -1,0 +1,463 @@
+<title>Action Town Games</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap">
+<style>
+/* Concept: a town map of ten games. Bright, rounded, kid-friendly. One yellow accent, blue ink. */
+:root {
+  --bg: #eaf3ff;
+  --surface: #ffffff;
+  --surface-2: #f3f8ff;
+  --ink: #17305c;
+  --ink-soft: #4b6490;
+  --line: #cddcf2;
+  --accent: #ffc42e;
+  --accent-ink: #4a3500;
+  --blue: #2f6fe4;
+  --good: #1f9d5b;
+  --good-bg: #d9f5e5;
+  --bad: #d63c46;
+  --bad-bg: #fde3e5;
+  --display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1c36; --surface: #172a4d; --surface-2: #1c3258; --ink: #eaf1ff; --ink-soft: #a9bde3;
+    --line: #2d4678; --accent: #ffc42e; --accent-ink: #3a2a00; --blue: #6c9cff;
+    --good: #5fdc98; --good-bg: #134a31; --bad: #ff8a92; --bad-bg: #5a1f27; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1c36; --surface: #172a4d; --surface-2: #1c3258; --ink: #eaf1ff; --ink-soft: #a9bde3;
+  --line: #2d4678; --accent: #ffc42e; --accent-ink: #3a2a00; --blue: #6c9cff;
+  --good: #5fdc98; --good-bg: #134a31; --bad: #ff8a92; --bad-bg: #5a1f27; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; font-weight: 600; line-height: 1.45;
+  padding-block: 18px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 880px; margin: 0 auto; display: grid; gap: 18px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.15; text-wrap: balance; }
+h1 { font-size: clamp(28px, 6vw, 42px); font-weight: 700; }
+h2 { font-size: clamp(22px, 4.5vw, 30px); }
+header.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px; }
+header.top p { margin: 4px 0 0; color: var(--ink-soft); }
+.stars { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-size: 20px; background: var(--surface); border: 2px solid var(--line); border-radius: 999px; padding: 6px 14px; }
+.stars b { color: var(--accent); font-size: 24px; -webkit-text-stroke: 1px var(--accent-ink); }
+nav.map { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+nav.map a { display: grid; gap: 2px; align-content: center; text-align: center; min-height: 64px; padding: 8px 6px; border-radius: 16px; border: 2px solid var(--line);
+  background: var(--surface); color: var(--ink); text-decoration: none; font-size: 14px; }
+nav.map a strong { font-family: var(--display); font-size: 20px; color: var(--blue); }
+nav.map a.done { background: var(--good-bg); border-color: var(--good); }
+nav.map a.done strong::after { content: " ★"; color: var(--good); }
+nav.map a.on { outline: 3px solid var(--accent); outline-offset: 1px; }
+nav.map a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+@media (max-width: 560px) { nav.map { grid-template-columns: repeat(5, 1fr); gap: 6px; } nav.map a span { display: none; } nav.map a { min-height: 52px; } }
+.card { background: var(--surface); border: 2px solid var(--line); border-radius: 22px; padding: clamp(14px, 3vw, 24px); display: grid; gap: 14px; }
+.task { color: var(--ink-soft); margin: 0; }
+.task em { font-style: normal; background: var(--accent); color: var(--accent-ink); border-radius: 8px; padding: 1px 8px; font-weight: 800; }
+button, .btn { font: inherit; font-weight: 800; cursor: pointer; border: 2px solid var(--line); background: var(--surface-2); color: var(--ink);
+  border-radius: 14px; padding: 10px 16px; min-height: 44px; transition: transform .08s; }
+button:active { transform: scale(.97); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button:disabled { opacity: .55; cursor: default; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.msg { min-height: 28px; font-family: var(--display); font-size: 20px; }
+.msg.ok { color: var(--good); } .msg.no { color: var(--bad); }
+.ok-bg { background: var(--good-bg) !important; border-color: var(--good) !important; }
+.no-bg { background: var(--bad-bg) !important; border-color: var(--bad) !important; }
+.shake { animation: shake .3s; }
+@keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+@media (prefers-reduced-motion: reduce) { .shake { animation: none; } * { transition: none !important; } }
+
+/* memory */
+.mem { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.mem button { min-height: 76px; font-family: var(--display); font-size: 19px; padding: 6px; background: var(--blue); color: #fff; border-color: var(--blue); }
+.mem button.up { background: var(--surface-2); color: var(--ink); border-color: var(--line); }
+.mem button.match { background: var(--good-bg); color: var(--ink); border-color: var(--good); }
+/* word search */
+.ws { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; max-width: 460px; touch-action: manipulation; }
+.ws button { padding: 0; min-height: 0; aspect-ratio: 1; font-family: var(--display); font-size: clamp(16px, 4.5vw, 24px); border-radius: 10px; }
+.ws button.pick { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.ws button.found { background: var(--good-bg); border-color: var(--good); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border-radius: 999px; border: 2px solid var(--line); padding: 4px 12px; background: var(--surface-2); font-weight: 800; }
+.chip.found { background: var(--good-bg); border-color: var(--good); text-decoration: line-through; }
+/* choices */
+.opts { display: flex; flex-wrap: wrap; gap: 10px; }
+.q { display: grid; gap: 10px; padding: 12px; border-radius: 16px; background: var(--surface-2); border: 2px solid var(--line); }
+.q > .qt { font-family: var(--display); font-size: 20px; }
+.gap { display: inline-block; min-width: 64px; text-align: center; border-bottom: 3px dashed var(--ink-soft); }
+.gap.filled { border-bottom-style: solid; border-color: var(--good); color: var(--good); font-family: var(--display); }
+/* unjumble */
+.line { min-height: 56px; display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; border: 3px dashed var(--line); border-radius: 16px; align-items: center; }
+.tile { font-family: var(--display); font-size: 20px; padding: 8px 14px; border-radius: 12px; }
+.pool { display: flex; flex-wrap: wrap; gap: 8px; min-height: 52px; }
+/* sort */
+.sortcards { display: flex; flex-wrap: wrap; gap: 8px; min-height: 52px; }
+.sortcards button.sel { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.bins { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.bin { border: 3px dashed var(--line); border-radius: 18px; padding: 10px; display: grid; gap: 8px; align-content: start; min-height: 130px; background: var(--surface-2); }
+.bin > button { font-family: var(--display); font-size: 19px; }
+.bin .in { display: flex; flex-wrap: wrap; gap: 6px; }
+.bin .in span { background: var(--good-bg); border: 2px solid var(--good); border-radius: 10px; padding: 2px 10px; }
+/* wheel */
+.wheelwrap { display: grid; gap: 12px; justify-items: center; }
+canvas { max-width: 100%; height: auto; }
+.pointer { width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent; border-top: 26px solid var(--bad); margin-bottom: -18px; z-index: 2; }
+.result { font-family: var(--display); font-size: 26px; text-align: center; min-height: 36px; }
+/* crossword */
+.cw { display: grid; gap: 2px; max-width: 460px; }
+.cw input { width: 100%; aspect-ratio: 1; text-align: center; font-family: var(--display); font-size: clamp(16px, 4.4vw, 24px); text-transform: uppercase; padding: 0; border: 2px solid var(--ink-soft); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.cw .blank { background: transparent; }
+.cw .cell { position: relative; }
+.cw .num { position: absolute; top: 1px; left: 3px; font-size: 10px; color: var(--ink-soft); pointer-events: none; }
+.clues { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px 18px; margin: 0; padding: 0; list-style: none; }
+.foot { color: var(--ink-soft); font-size: 14px; text-align: center; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Action Town Games</h1>
+      <p>Look! What are they doing? Ten games for Present Continuous, Grade 4.</p>
+    </div>
+    <div class="stars" aria-live="polite"><b>★</b><span id="starcount">0 / 10</span></div>
+  </header>
+  <nav class="map" id="map" aria-label="Games"></nav>
+  <main class="card" id="stage"></main>
+  <p class="foot">Author: Strygina Alisa Vitalievna, MGPU. Max and Lily welcome you to Action Town.</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  function h(tag, attrs, kids) {
+    var e = document.createElement(tag);
+    for (var k in (attrs || {})) {
+      if (k === "class") e.className = attrs[k];
+      else if (k === "text") e.textContent = attrs[k];
+      else if (k.slice(0, 2) === "on") e.addEventListener(k.slice(2), attrs[k]);
+      else e.setAttribute(k, attrs[k]);
+    }
+    (kids || []).forEach(function (c) { if (c != null) e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function shake(e) { e.classList.remove("shake"); void e.offsetWidth; e.classList.add("shake"); }
+  function say(text) {
+    try {
+      if (!("speechSynthesis" in window)) return false;
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text); u.lang = "en-GB"; u.rate = 0.9; window.speechSynthesis.speak(u); return true;
+    } catch (e) { return false; }
+  }
+
+  var done = {};
+  var GAMES = [
+    { id: "i1", n: "I1", t: "Memory", f: memory },
+    { id: "i2", n: "I2", t: "Word search", f: wordsearch },
+    { id: "i3", n: "I3", t: "Listen", f: listen },
+    { id: "i4", n: "I4", t: "Missing word", f: missing },
+    { id: "i5", n: "I5", t: "Unjumble", f: unjumble },
+    { id: "i6", n: "I6", t: "Group sort", f: sort1 },
+    { id: "i7", n: "I7", t: "Wheel", f: wheel },
+    { id: "i8", n: "I8", t: "Crossword", f: crossword },
+    { id: "i9", n: "I9", t: "Group sort 2", f: sort2 },
+    { id: "i10", n: "I10", t: "Choose", f: choose }
+  ];
+
+  function finish(id) {
+    if (!done[id]) { done[id] = true; drawMap(); }
+  }
+  function drawMap() {
+    var cur = (location.hash || "").replace("#", "") || "i1";
+    var m = $("#map"); m.textContent = "";
+    GAMES.forEach(function (g) {
+      m.appendChild(h("a", { href: "#" + g.id, class: (done[g.id] ? "done " : "") + (g.id === cur ? "on" : ""), "aria-current": g.id === cur ? "page" : "false" },
+        [h("strong", { text: g.n }), h("span", { text: g.t })]));
+    });
+    var n = Object.keys(done).length;
+    $("#starcount").textContent = n + " / 10" + (n === 10 ? "  You did it!" : "");
+  }
+  function route() {
+    var cur = (location.hash || "").replace("#", "") || "i1";
+    var g = GAMES.filter(function (x) { return x.id === cur; })[0] || GAMES[0];
+    var s = $("#stage"); s.textContent = "";
+    try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
+    g.f(s, g.id);
+    drawMap();
+  }
+  window.addEventListener("hashchange", route);
+
+  function head(stage, title, task) {
+    stage.appendChild(h("h2", { text: title }));
+    stage.appendChild(h("p", { class: "task" }, task));
+  }
+
+  /* I1 Memory */
+  function memory(stage, id) {
+    head(stage, "Task 1. Memory", [h("em", { text: "Find the pairs:" }), " picture word and its Russian meaning."]);
+    var pairs = [["play", "играть"], ["read", "читать"], ["run", "бегать"], ["dance", "танцевать"], ["swim", "плавать"], ["write", "писать"], ["eat", "есть"], ["draw", "рисовать"]];
+    var cards = [];
+    pairs.forEach(function (p, i) { cards.push({ k: i, t: p[0] }); cards.push({ k: i, t: p[1] }); });
+    cards = shuffle(cards);
+    var grid = h("div", { class: "mem" }), msg = h("div", { class: "msg", "aria-live": "polite" });
+    var open = [], matched = 0, moves = 0, lock = false;
+    cards.forEach(function (c) {
+      var b = h("button", { text: "?", "aria-label": "card" });
+      b.addEventListener("click", function () {
+        if (lock || b.classList.contains("up") || b.classList.contains("match")) return;
+        b.textContent = c.t; b.classList.add("up"); open.push({ b: b, c: c });
+        say(/[a-z]/.test(c.t) ? c.t : "");
+        if (open.length === 2) {
+          moves++; lock = true;
+          var a = open[0], z = open[1];
+          if (a.c.k === z.c.k) {
+            a.b.classList.add("match"); z.b.classList.add("match"); matched++; open = []; lock = false;
+            msg.className = "msg ok"; msg.textContent = "Great! Pairs found: " + matched + " / 8";
+            if (matched === 8) { msg.textContent = "You found all pairs in " + moves + " moves!"; finish(id); }
+          } else {
+            msg.className = "msg no"; msg.textContent = "Try again!";
+            setTimeout(function () { [a, z].forEach(function (x) { x.b.textContent = "?"; x.b.classList.remove("up"); }); open = []; lock = false; }, 800);
+          }
+        }
+      });
+      grid.appendChild(b);
+    });
+    stage.appendChild(grid); stage.appendChild(msg);
+    stage.appendChild(h("div", { class: "row" }, [h("button", { text: "New game", onclick: route })]));
+  }
+
+  /* I2 Word search */
+  function wordsearch(stage, id) {
+    head(stage, "Task 2. Word search", [h("em", { text: "Find 8 action words." }), " Tap the first letter, then the last letter of a word."]);
+    var rows = ["MKHFHCUKSR", "LPKWRITEVC", "DSOFSLEROB", "READWYCDTU", "LLMVIRURPC", "CIRYMCBAKW", "UYPKNRYWMA", "PMFVDURBGK", "EHNDANCENR", "CPLAYFPEAT"];
+    var words = ["PLAY", "READ", "RUN", "DANCE", "SWIM", "WRITE", "EAT", "DRAW"], found = {}, start = null;
+    var grid = h("div", { class: "ws", role: "grid" }), chips = h("div", { class: "chips" }), msg = h("div", { class: "msg", "aria-live": "polite" });
+    var btns = [];
+    words.forEach(function (w) { chips.appendChild(h("span", { class: "chip", id: "c-" + w, text: w.toLowerCase() })); });
+    for (var r = 0; r < 10; r++) for (var c = 0; c < 10; c++) {
+      (function (r, c) {
+        var b = h("button", { text: rows[r][c], "aria-label": "letter " + rows[r][c] });
+        b.addEventListener("click", function () {
+          if (!start) { start = { r: r, c: c }; b.classList.add("pick"); msg.className = "msg"; msg.textContent = "Now tap the last letter."; return; }
+          var dr = Math.sign(r - start.r), dc = Math.sign(c - start.c), len = Math.max(Math.abs(r - start.r), Math.abs(c - start.c)) + 1;
+          var straight = (r === start.r || c === start.c || Math.abs(r - start.r) === Math.abs(c - start.c));
+          var cells = [], s = "";
+          if (straight) for (var i = 0; i < len; i++) { var rr = start.r + dr * i, cc = start.c + dc * i; cells.push(btns[rr * 10 + cc]); s += rows[rr][cc]; }
+          btns.forEach(function (x) { x.classList.remove("pick"); });
+          var rev = s.split("").reverse().join(""), hit = words.indexOf(s) >= 0 ? s : (words.indexOf(rev) >= 0 ? rev : null);
+          if (hit && !found[hit]) {
+            found[hit] = true; cells.forEach(function (x) { x.classList.add("found"); });
+            $("#c-" + hit).classList.add("found");
+            var n = Object.keys(found).length; msg.className = "msg ok"; msg.textContent = "Yes! " + hit.toLowerCase() + "  (" + n + " / 8)";
+            if (n === 8) { msg.textContent = "All 8 words found. Great job!"; finish(id); }
+          } else { msg.className = "msg no"; msg.textContent = "Not a word from the list. Try again."; shake(grid); }
+          start = null;
+        });
+        btns.push(b); grid.appendChild(b);
+      })(r, c);
+    }
+    stage.appendChild(chips); stage.appendChild(grid); stage.appendChild(msg);
+  }
+
+  /* generic multiple choice */
+  function quiz(stage, id, items, opts) {
+    var score = 0, answered = 0, msg = h("div", { class: "msg", "aria-live": "polite" });
+    items.forEach(function (it) {
+      var q = h("div", { class: "q" }), tl = h("div", { class: "qt" }), op = h("div", { class: "opts" });
+      var gapEl = null;
+      if (it.q.indexOf("___") >= 0) {
+        var parts = it.q.split("___"); gapEl = h("span", { class: "gap", text: "   " });
+        tl.appendChild(document.createTextNode(parts[0])); tl.appendChild(gapEl); tl.appendChild(document.createTextNode(parts[1] || ""));
+      } else tl.textContent = it.q;
+      var locked = false;
+      it.o.forEach(function (t, i) {
+        var b = h("button", { text: t });
+        b.addEventListener("click", function () {
+          if (locked) return;
+          if (i === it.a) {
+            locked = true; b.classList.add("ok-bg"); answered++; score++;
+            if (gapEl) { gapEl.textContent = t; gapEl.classList.add("filled"); }
+            say(it.q.replace("___", t));
+            msg.className = "msg ok"; msg.textContent = "Correct! " + answered + " / " + items.length;
+            if (answered === items.length) { msg.textContent = "Super! All " + items.length + " answers are correct."; finish(id); }
+          } else { b.classList.add("no-bg"); b.disabled = true; shake(q); msg.className = "msg no"; msg.textContent = "Not this one. Try again!"; }
+        });
+        op.appendChild(b);
+      });
+      q.appendChild(tl); q.appendChild(op); stage.appendChild(q);
+    });
+    stage.appendChild(msg);
+  }
+
+  /* I3 Listen */
+  function listen(stage, id) {
+    head(stage, "Task 3. Listen and choose", [h("em", { text: "Listen to Max." }), " Press the button and answer the questions."]);
+    var text = "Hi, I'm Max. I'm in the park. I'm riding my bike. My dog is running next to me.";
+    var tr = h("p", { class: "task", hidden: "" }, [text]);
+    var row = h("div", { class: "row" }, [
+      h("button", { class: "primary", text: "Play audio", onclick: function () { if (!say(text)) { tr.hidden = false; } } }),
+      h("button", { text: "Show the text", onclick: function () { tr.hidden = !tr.hidden; } })
+    ]);
+    stage.appendChild(row); stage.appendChild(tr);
+    quiz(stage, id, [
+      { q: "What is Max doing?", o: ["riding a bike", "swimming", "reading"], a: 0 },
+      { q: "What is the dog doing?", o: ["sleeping", "running", "eating"], a: 1 },
+      { q: "Where is Max?", o: ["at school", "at home", "in the park"], a: 2 }
+    ]);
+  }
+
+  /* I4 Missing word */
+  function missing(stage, id) {
+    head(stage, "Task 5. Missing word", [h("em", { text: "Choose am, is or are." })]);
+    var items = [["Mary ___ drawing.", 1], ["The children ___ playing.", 2], ["I ___ reading.", 0], ["We ___ swimming.", 2], ["He ___ eating.", 1]];
+    quiz(stage, id, items.map(function (x) { return { q: x[0], o: ["am", "is", "are"], a: x[1] }; }));
+  }
+
+  /* I5 Unjumble */
+  function unjumble(stage, id) {
+    head(stage, "Task 6. Unjumble", [h("em", { text: "Put the words in order" }), " and make a sentence. Tap a word to move it."]);
+    var sents = ["The boy is playing football.", "They are dancing.", "Lily is drawing a picture.", "We are reading a book."], solved = 0;
+    var msg = h("div", { class: "msg", "aria-live": "polite" });
+    sents.forEach(function (s) {
+      var words = s.replace(".", "").split(" "), q = h("div", { class: "q" }), line = h("div", { class: "line" }), pool = h("div", { class: "pool" });
+      var locked = false;
+      function mk(w, inPool) {
+        var b = h("button", { class: "tile", text: w });
+        b.addEventListener("click", function () {
+          if (locked) return;
+          (inPool ? line : pool).appendChild(mk(w, !inPool)); b.remove(); check();
+        });
+        return b;
+      }
+      shuffle(words).forEach(function (w) { pool.appendChild(mk(w, true)); });
+      function check() {
+        if (pool.children.length) return;
+        var got = Array.prototype.map.call(line.children, function (x) { return x.textContent; }).join(" ") + ".";
+        if (got === s) { locked = true; line.style.borderColor = "var(--good)"; Array.prototype.forEach.call(line.children, function (x) { x.classList.add("ok-bg"); }); solved++; say(s);
+          msg.className = "msg ok"; msg.textContent = "Correct! " + solved + " / " + sents.length; if (solved === sents.length) { msg.textContent = "All sentences are correct!"; finish(id); } }
+        else { shake(line); msg.className = "msg no"; msg.textContent = "Not yet. Tap a word to move it back."; }
+      }
+      q.appendChild(line); q.appendChild(pool); stage.appendChild(q);
+    });
+    stage.appendChild(msg);
+  }
+
+  /* generic group sort (tap a card, then tap a group) */
+  function sortGame(stage, id, groups, items, hint) {
+    var cardsBox = h("div", { class: "sortcards" }), bins = h("div", { class: "bins" }), msg = h("div", { class: "msg", "aria-live": "polite" });
+    var sel = null, left = items.length;
+    stage.appendChild(h("p", { class: "task", text: hint }));
+    var binEls = groups.map(function (g, gi) {
+      var inn = h("div", { class: "in" });
+      var b = h("button", { text: g, onclick: function () {
+        if (!sel) { msg.className = "msg"; msg.textContent = "First tap a card."; return; }
+        if (sel.g === gi) {
+          inn.appendChild(h("span", { text: sel.t })); sel.b.remove(); sel = null; left--; msg.className = "msg ok"; msg.textContent = "Correct!";
+          if (!left) { msg.textContent = "Everything is in the right place!"; finish(id); }
+        } else { shake(sel.b); msg.className = "msg no"; msg.textContent = "Not this group. Try another one."; }
+      } });
+      bins.appendChild(h("div", { class: "bin" }, [b, inn])); return inn;
+    });
+    shuffle(items.map(function (x) { return x; })).forEach(function (it) {
+      var b = h("button", { text: it[0] });
+      b.addEventListener("click", function () {
+        Array.prototype.forEach.call(cardsBox.children, function (x) { x.classList.remove("sel"); });
+        b.classList.add("sel"); sel = { b: b, t: it[0], g: it[1] }; say(it[0]); msg.className = "msg"; msg.textContent = "Now tap the right group.";
+      });
+      cardsBox.appendChild(b);
+    });
+    stage.appendChild(cardsBox); stage.appendChild(bins); stage.appendChild(msg);
+  }
+  function sort1(stage, id) {
+    head(stage, "Task 7. Group sort", [h("em", { text: "Sort the sentences:" }), " positive, negative or question."]);
+    sortGame(stage, id, ["(+) positive", "(-) negative", "(?) question"], [
+      ["I am reading.", 0], ["We are playing.", 0], ["She is not sleeping.", 1], ["He isn't running.", 1], ["Are they swimming?", 2], ["Is Max eating?", 2]
+    ], "Tap a card, then tap the group where it belongs.");
+  }
+  function sort2(stage, id) {
+    head(stage, "Task 11. Group sort (team game)", [h("em", { text: "Sort the words:" }), " Present Simple or Present Continuous. Play in a team: each player takes a card."]);
+    sortGame(stage, id, ["Present Simple", "Present Continuous"], [
+      ["every day", 0], ["usually", 0], ["on Sundays", 0], ["often", 0], ["now", 1], ["at the moment", 1], ["Look!", 1], ["Listen!", 1]
+    ], "Tap a card, then tap the group where it belongs.");
+  }
+
+  /* I7 Wheel */
+  function wheel(stage, id) {
+    head(stage, "Task 8. Spin the wheel", [h("em", { text: "Spin, show the action," }), " your friend guesses: Are you swimming? Yes, I am. / No, I'm not."]);
+    var words = ["dancing", "swimming", "reading", "drawing", "eating", "running", "writing", "playing a game"];
+    var cols = ["#2f6fe4", "#f2a900", "#1f9d5b", "#d63c46", "#7a4fd1", "#e46f2f", "#1c9ab8", "#c2409a"];
+    var size = 340, cv = h("canvas", { width: size, height: size, role: "img", "aria-label": "Wheel with eight actions" }), ctx = cv.getContext("2d");
+    var ang = 0, spinning = false, res = h("div", { class: "result", "aria-live": "polite" });
+    function draw() {
+      ctx.clearRect(0, 0, size, size); var n = words.length, a = 2 * Math.PI / n;
+      for (var i = 0; i < n; i++) {
+        ctx.beginPath(); ctx.moveTo(size / 2, size / 2); ctx.arc(size / 2, size / 2, size / 2 - 4, ang + i * a, ang + (i + 1) * a); ctx.closePath();
+        ctx.fillStyle = cols[i]; ctx.fill(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 3; ctx.stroke();
+        ctx.save(); ctx.translate(size / 2, size / 2); ctx.rotate(ang + (i + .5) * a); ctx.fillStyle = "#fff"; ctx.font = "700 17px Fredoka, sans-serif"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+        ctx.fillText(words[i], size / 2 - 18, 0); ctx.restore();
+      }
+      ctx.beginPath(); ctx.arc(size / 2, size / 2, 16, 0, 7); ctx.fillStyle = "#fff"; ctx.fill();
+    }
+    draw();
+    function spin() {
+      if (spinning) return; spinning = true; res.textContent = ""; var target = ang + Math.PI * 2 * (4 + Math.random() * 3), t0 = null, a0 = ang, dur = 3600;
+      function step(t) {
+        if (!t0) t0 = t; var p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3); ang = a0 + (target - a0) * e; draw();
+        if (p < 1) requestAnimationFrame(step); else {
+          spinning = false; var n = words.length, a = 2 * Math.PI / n, pos = ((-Math.PI / 2 - ang) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI), idx = Math.floor(pos / a) % n;
+          var w = words[idx]; res.textContent = "Show: " + w + "!  Ask: Are you " + w + "?"; say("Are you " + w + "?"); finish(id);
+        }
+      }
+      requestAnimationFrame(step);
+    }
+    stage.appendChild(h("div", { class: "wheelwrap" }, [h("div", { class: "pointer" }), cv, h("button", { class: "primary", text: "Spin!", onclick: spin }), res]));
+  }
+
+  /* I8 Crossword */
+  function crossword(stage, id) {
+    head(stage, "Task 9. Crossword", [h("em", { text: "Write the -ing form." }), " Type one letter in every box."]);
+    var W = [{ w: "DANCING", r: 6, c: 2, d: "A", clue: "dance + ing" }, { w: "SWIMMING", r: 0, c: 4, d: "D", clue: "swim + ing" }, { w: "WRITING", r: 4, c: 6, d: "D", clue: "write + ing" },
+      { w: "RUNNING", r: 0, c: 8, d: "D", clue: "run + ing" }, { w: "SITTING", r: 2, c: 0, d: "A", clue: "sit + ing" }, { w: "PLAYING", r: 9, c: 1, d: "A", clue: "play + ing" }];
+    var R = 11, C = 9, cell = {}, nums = {};
+    W.forEach(function (x, k) {
+      x.n = k + 1; nums[x.r + "," + x.c] = nums[x.r + "," + x.c] || x.n;
+      for (var i = 0; i < x.w.length; i++) { var r = x.d === "A" ? x.r : x.r + i, c = x.d === "A" ? x.c + i : x.c; cell[r + "," + c] = x.w[i]; }
+    });
+    var grid = h("div", { class: "cw", style: "grid-template-columns: repeat(" + C + ", 1fr)" }), inputs = {}, msg = h("div", { class: "msg", "aria-live": "polite" });
+    for (var r = 0; r < R; r++) for (var c = 0; c < C; c++) {
+      var key = r + "," + c;
+      if (!cell[key]) { grid.appendChild(h("div", { class: "blank" })); continue; }
+      var wrap = h("div", { class: "cell" }), inp = h("input", { maxlength: "1", "aria-label": "row " + (r + 1) + " column " + (c + 1), autocomplete: "off", autocapitalize: "characters" });
+      inp.addEventListener("input", function () { this.value = this.value.replace(/[^a-zA-Z]/g, "").slice(0, 1); this.classList.remove("ok-bg", "no-bg"); });
+      inputs[key] = inp; wrap.appendChild(inp); if (nums[key]) wrap.appendChild(h("span", { class: "num", text: nums[key] })); grid.appendChild(wrap);
+    }
+    var cl = h("ul", { class: "clues" });
+    W.forEach(function (x) { cl.appendChild(h("li", { text: x.n + (x.d === "A" ? " across: " : " down: ") + x.clue })); });
+    function check() {
+      var bad = 0, empty = 0;
+      Object.keys(cell).forEach(function (k) { var v = inputs[k].value.toUpperCase(); inputs[k].classList.remove("ok-bg", "no-bg");
+        if (!v) { empty++; return; } if (v === cell[k]) inputs[k].classList.add("ok-bg"); else { inputs[k].classList.add("no-bg"); bad++; } });
+      if (!bad && !empty) { msg.className = "msg ok"; msg.textContent = "Perfect crossword!"; finish(id); }
+      else { msg.className = "msg no"; msg.textContent = bad ? "Red boxes are wrong. Try again!" : "Some boxes are empty."; }
+    }
+    stage.appendChild(grid); stage.appendChild(cl);
+    stage.appendChild(h("div", { class: "row" }, [h("button", { class: "primary", text: "Check", onclick: check })])); stage.appendChild(msg);
+  }
+
+  /* I10 Choose the form */
+  function choose(stage, id) {
+    head(stage, "Task 12. Choose the form", [h("em", { text: "Now or every day?" }), " Choose the correct form."]);
+    quiz(stage, id, [
+      { q: "Look! The cat ___.", o: ["sleeps", "is sleeping"], a: 1 },
+      { q: "My dad ___ every day.", o: ["works", "is working"], a: 0 },
+      { q: "Listen! They ___.", o: ["sing", "are singing"], a: 1 },
+      { q: "We ___ on Sundays.", o: ["play", "are playing"], a: 0 },
+      { q: "I ___ now.", o: ["read", "am reading"], a: 1 }
+    ]);
+  }
+
+  route();
+})();
+</script>
